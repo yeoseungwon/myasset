@@ -7,9 +7,6 @@ import math
 import random
 import os
 from datetime import datetime
-from statsmodels import regression
-import statsmodels.api as sm
-from openpyxl import Workbook
 
 
 def cal_mdd(x):
@@ -29,7 +26,7 @@ class Stock:
     def __init__(self, stock_name, u, v):
         self.u = u    # 연 평균 증가율
         self.v = v    # 연 평균 변화율
-        self.data = web.DataReader(stock_name, 'yahoo', '2007-02-01').Close[:]
+        self.data = web.DataReader(stock_name, 'yahoo', '2011-02-01').Close[:]
         self.money = 0
         self.stock_num = 0
         self.stock_price = 0.0
@@ -160,6 +157,7 @@ def cal_momen_losscut(asset, _day):
     temp = 0.0
     momen_rapid_lc = 1
     _vol = []
+    print(_day)
     for i_lc in range(1, 28):
         if i_lc < 15:
             temp = copy(temp0)
@@ -179,26 +177,28 @@ def cal_momen_losscut(asset, _day):
 
     return momentum
 
-
-def linreg(x, y):
-    x = sm.add_constant(x)
-    model = regression.linear_model.OLS(y, x).fit()
-
-    x = x[:, 1]
-    return model.params[0], model.params[1]
-
+# 현재 가격 이력
 today_price_checker = 0
-now_price = [1000.0, 1000.0, 1000.0, 1000.0, 1000.0]
+now_price = [76.16, 167.430, 89.87, 73.546, 159.47]   # <---------------------------여기 수정 해야 함
 year = datetime.today().year
 month = datetime.today().month
 day = datetime.today().day
 today = pd.Timestamp(year, month, day, 00, 00, 00)
+'''
+my_stock_num = [0, 8, 5, 0, 9]  # <---------------------------------------------------여기 수정 해야 함
+my_stock_avg_price = [0, 166.1688, 84.9708, 0, 161.0678]  # <---------------------------여기 수정 해야 함
+current_money = 420  # <--------------------------------------------------------------여기 수정 해야 함
+'''
+my_stock_num = [0, 9, 3, 0, 2]  # <---------------------------------------------------여기 수정 해야 함
+my_stock_avg_price = [0, 166.0550, 229.83, 0, 162.1]  # <---------------------------여기 수정 해야 함
+current_money = 2587  # <--------------------------------------------------------------여기 수정 해야 함
 
-# my_stock_name = ['VYM', 'TLT', 'QQQ', 'VDC', 'IAU']  # 새로운  # 기존
+
 my_stock_name = ['VYM', 'TLT', 'QQQ', 'VDC', 'GLD']  # 새로운
 stock_ref = 'SPY'
-my_u = [0.0624, 0.0745, 0.0509, 0.0912, 0.0825]
-my_v = [0.1485, 0.1314, 0.2361, 0.1113, 0.1759]
+my_u = [0.0635, 0.0745, 0.0509, 0.0912, 0.0825]
+my_v = [0.1491, 0.1314, 0.2361, 0.1113, 0.1759]
+
 my_stock = []
 momen = []
 smomen = []
@@ -208,15 +208,11 @@ sim_n = 1
 save_mc_result = np.zeros((sim_n, 2))
 add_money = 0
 cash_rate = 0.5
-start_money = 8000
-real_money = 8000
+start_money = current_money
+real_money = 0
 avg_MDD = 0.0
 avg_CAGR = 0.0
-# write_wb = Workbook()
-# write_ws = write_wb.active
-lc_momen = 0.0
-
-print("시뮬레이션용 코드")
+print("구매 용, 현재 가격(today_price checker), 현재 보유 돈 추가 할 것")
 print("Data 입력 시작")
 stocks = len(my_stock_name)
 
@@ -268,22 +264,18 @@ for i in range(1, my_stock[0].data_length):
         else:
             pass
 
+My_Asset = np.zeros(my_stock[0].data_length)
+my_money = copy(start_money)
 cal_for_cagr = start_money + add_money * (my_stock[0].data_length - 240) // 20
 
 for k in range(0, sim_n):
-    My_Asset = np.zeros(my_stock[0].data_length)
-    my_money = copy(start_money)
-    if k > 0:
+    if k > 1:
         for j in range(stocks):
             my_stock[j].set_montecarlo()
-            my_stock[j].stock_num = 0
-            my_stock[j].stock_price = 0
-            my_stock[j].hold_day = 0
     else:
         pass
 
     for i in range(my_stock[0].data_length):
-
         if i == my_stock[0].data_length-1:
             for j in range(stocks):
                 temp_s[j] = my_stock[j].stock_num
@@ -297,14 +289,18 @@ for k in range(0, sim_n):
                 momen[j] = my_stock[j].cal_mod_ms(i)
                 ref_my_stock.cal_momentum_score(i)
 
-        if i >= 240:
-            if i % 20 == (my_stock[0].data_length - 1) % 20:
+        #if i == 3322:
+        #    my_money = 3000
+        if i == 2342:
+            for j in range(stocks):
+                my_stock[j].stock_price = my_stock_avg_price[j]
+                my_stock[j].stock_num = my_stock_num[j]
+            my_money = current_money
+
+        if i >= 2342:
+            if i % 20 == (my_stock[0].data_length - 1) % 20:  # 한달에 한번 모멘텀 스코어 이용해서 매매, 상대 모멘텀으로 주식 종목수/1.3 선정
                 my_money += add_money
                 ref_my_money += add_money
-            else:
-                pass
-
-            if i % 20 == (my_stock[0].data_length - 1) % 20:  # 한달에 한번 모멘텀 스코어 이용해서 매매, 상대 모멘텀으로 주식 종목수/1.3 선정
                 ref_my_stock.stock_num += ref_my_money // ref_my_stock.d[i]
                 ref_my_money -= ref_my_money // ref_my_stock.d[i] * ref_my_stock.d[i]
 
@@ -315,7 +311,7 @@ for k in range(0, sim_n):
                 # 상대 모멘텀
                 for j in range(stocks):
                     smomen[j] = 0.00
-                for j in range(3):  # 상대 모멘텀으로 상위 x% 선정, smomen에 상위 x% 주식 번호 저장
+                for j in range(math.floor(stocks / 1.3)):  # 상대 모멘텀으로 상위 x% 선정, smomen에 상위 x% 주식 번호 저장
                     for jj in range(stocks):
                         if momen[jj] == c_momen[j]:
                             smomen[jj] = 1.0
@@ -324,7 +320,7 @@ for k in range(0, sim_n):
                             pass
                 # 상대 모멘텀 종료
                 # 모멘텀 비율 이용하여 현금 비중 구하기
-                cash_rate = 0.25
+                cash_rate = 0.0
                 temp_cash_rate = 0
                 for j in range(stocks):
                     if smomen[j] == 1:
@@ -373,13 +369,14 @@ for k in range(0, sim_n):
                     # 값에 따라 매수 또는 매도 진행
                     if j == stocks - 1:
                         s_rate[j] = s_rate[j] * 0.2
-                    my_money += my_stock[j].trading(s_rate[j], i)
+                    my_money += my_stock[j].trading(s_rate[j], i)  ############
 
                 if my_money < 0:
                     print(i)
                     print("WTF")
                 else:
                     pass
+
             # 종목별 익절매
             for j in range(stocks - 1):
                 if my_stock[j].stock_price * 1.15 < my_stock[j].d[i] and my_stock[j].stock_price != 0:
@@ -394,7 +391,6 @@ for k in range(0, sim_n):
                 my_stock[stocks - 1].checker = 0
             else:
                 pass
-
             if my_money < 0:
                 print("W")
             else:
@@ -413,48 +409,41 @@ for k in range(0, sim_n):
                     my_money += my_stock[j].trading(s_rate[j], i)
             else:
                 pass
-
         else:
             if i % 20 == (my_stock[0].data_length - 1) % 20:
                 my_money += add_money
                 ref_my_money += add_money
             else:
                 pass
+
         My_Asset[i] = 0
         ref_My_Asset[i] = 0
         for j in range(stocks):
             My_Asset[i] += my_stock[j].d[i] * my_stock[j].stock_num
         ref_My_Asset[i] += ref_my_stock.d[i] * ref_my_stock.stock_num + ref_my_money
         My_Asset[i] += my_money
-        # TODO 엑셀로 데이터 출력하기 주식 수량, 구매가, 현재가, 현재 돈
-        '''
-        if k == 0:
-            for j in range(stocks):
-                write_ws.cell(i + 1, j * 3 + 1, my_stock[j].stock_num)
-                write_ws.cell(i + 1, j * 3 + 2, my_stock[j].stock_price)
-                write_ws.cell(i + 1, j * 3 + 3, my_stock[j].d[i])
-            write_ws.cell(i + 1, 16, my_money)
-            write_ws.cell(i + 1, 17, lc_momen)
-'''
     if k == 0:
-        mdd = cal_mdd(ref_My_Asset)
-        print("REF MDD : ", '%.2f' % mdd, end='\t')
-        cagr = cal_cagr(ref_My_Asset[-1], cal_for_cagr, my_stock[0].data_length)
-        print("REF CAGR : ", '%.2f' % cagr)
+        # mdd = cal_mdd(ref_My_Asset)
+        # print("REF MDD : ", '%.2f' % mdd, end='\t')
+        # cagr = cal_cagr(ref_My_Asset[-1], cal_for_cagr, my_stock[0].data_length)
+        # print("REF CAGR : ", '%.2f' % cagr)
 
-        mdd = cal_mdd(My_Asset)
-        print("TEST MDD : ", '%.2f' % mdd, end='\t')
-        cagr = cal_cagr(My_Asset[-1], cal_for_cagr, my_stock[0].data_length)
-        print("TEST CAGR : ", '%.2f' % cagr)
+        # mdd = cal_mdd(My_Asset)
+        # print("TEST MDD : ", '%.2f' % mdd, end='\t')
+        # cagr = cal_cagr(My_Asset[-1], cal_for_cagr, my_stock[0].data_length)
+        # print("TEST CAGR : ", '%.2f' % cagr)
 
         My_Asset_plot = pd.Series(My_Asset, index=my_stock[0].data.index)
         ref_My_Asset_plot = pd.Series(ref_My_Asset, index=my_stock[0].data.index)
         bank_My_Asset_plot = pd.Series(bank_My_Asset, index=my_stock[0].data.index)
 
-        plt.subplot()
-        plt.plot(ref_My_Asset_plot, label='ref')
-        plt.plot(bank_My_Asset_plot, label='BANK')
-        plt.plot(My_Asset_plot, label='TEST')
+        # df = pd.DataFrame(My_Asset)
+        # df.to_excel("MYASSET.xlsx")
+
+        # plt.subplot()
+        # plt.plot(ref_My_Asset_plot, label='ref')
+        # plt.plot(bank_My_Asset_plot, label='BANK')
+        # plt.plot(My_Asset_plot, label='TEST')
 
         print("주식 보유량 및 변화량")
         # rate = real_money / My_Asset[-1]
@@ -464,40 +453,27 @@ for k in range(0, sim_n):
             print("변화량 : ", '%3.f' % (my_stock[j].stock_num - temp_s[j]), end='\t')
             print("Momentum : ", '%.2f' % momen[j])
         print("CASH : ", '%.2f' % my_money)
-        print("총 자산 : ", '%.2f' % My_Asset[-1])
         print("시스템 손절매 모멘텀:", '%.2f' % lc_momen)
-
-        # _spy = web.DataReader('SPY', 'yahoo', '2007-02-01')
-        # benchmark_spy = _spy.Close.pct_change()[1:]
-        benchmark_ref = ref_My_Asset_plot.pct_change()[1:]
-        benchmark_asset = My_Asset_plot.pct_change()[1:]
-        alpha, beta = linreg(benchmark_ref.values[260:], benchmark_asset.values[260:])
-        asset_pct_change = benchmark_asset.to_numpy()
-        asset_stdev = np.std(asset_pct_change) * math.sqrt(240)
-        sharpratio = (cagr / 100 - 0.03) / asset_stdev
-        print("sharp:", '%.5f' % sharpratio)
-        print("beta:", '%.5f' % beta)
     else:
         pass
-    if k % 1 == 0:
+    if k % 20 == 0:
         print(k)
-    mdd = cal_mdd(My_Asset)
-    save_mc_result[k, 0] = mdd
-    cagr = cal_cagr(My_Asset[-1], cal_for_cagr, my_stock[0].data_length)
-    save_mc_result[k, 1] = cagr
-    avg_MDD = (avg_MDD * k + mdd) / (k + 1)
-    avg_CAGR = (avg_CAGR * k + cagr) / (k + 1)
+    # mdd = cal_mdd(My_Asset)
+    # save_mc_result[k, 0] = mdd
+    # cagr = cal_cagr(My_Asset[-1], cal_for_cagr, my_stock[0].data_length)
+    # save_mc_result[k, 1] = cagr
+    # avg_MDD = (avg_MDD * k + mdd) / (k + 1)
+    # avg_CAGR = (avg_CAGR * k + cagr) / (k + 1)
 
-print("AVG MDD : ", '%.2f' % avg_MDD, end='\t')
-print("AVG CAGR : ", '%.2f' % avg_CAGR)
+# print("AVG MDD : ", '%.2f' % avg_MDD, end='\t')
+# print("AVG CAGR : ", '%.2f' % avg_CAGR)
 
 # df = pd.DataFrame(save_mc_result)
-data = {'mdd': save_mc_result[:, 0], 'CAGR': save_mc_result[:, 1]}
-df = pd.DataFrame(data)
-df.to_excel("output.xlsx")
+# data = {'mdd': save_mc_result[:, 0], 'CAGR': save_mc_result[:, 1]}
+# df = pd.DataFrame(data)
+# df.to_excel("output.xlsx")
 
-plt.legend(loc='best')
-plt.grid()
-plt.show()
-#write_wb.save('전체값.xlsx')
+# plt.legend(loc='best')
+# plt.grid()
+# plt.show()
 print("end")
