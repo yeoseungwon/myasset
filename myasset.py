@@ -134,6 +134,17 @@ class Stock:
 
     def cal_mod_ms(self, _day):
         self.mod_momentum = 0.0
+        period = 10
+        cal_day = 120
+        val = abs(self.d[_day] - self.d[_day - cal_day])
+        fractal = 0
+        for ii in range(int(cal_day / period)):
+            fractal += abs(self.d[_day - ii * period] - self.d[_day - (ii + 1) * period])
+        er = val / fractal
+        if er > 0.3:
+            er = 1
+        period_momen = int(10 + round(er * 10))
+        # period_momen = 20
         temp0 = 1.0
         temp1 = 1.0
         temp2 = 1.2
@@ -147,7 +158,7 @@ class Stock:
                 temp = copy(temp2)
             else:
                 temp = copy(temp3)
-            self.mod_momentum += temp * (self.d[_day] / (self.d[_day - ii * 20] * (1 + self.interest * ii / 12)))
+            self.mod_momentum += temp * (self.d[_day] / (self.d[_day - ii * period_momen] * (1 + self.interest * ii * period_momen / 240)))
         self.mod_momentum = self.mod_momentum / (temp0 * 3 + temp1 * 3 + temp2 * 3 + temp3 * 3)
         return self.mod_momentum
 
@@ -194,11 +205,11 @@ month = datetime.today().month
 day = datetime.today().day
 today = pd.Timestamp(year, month, day, 00, 00, 00)
 
-# my_stock_name = ['VYM', 'TLT', 'QQQ', 'VDC', 'IAU']  # 새로운  # 기존
-my_stock_name = ['VYM', 'TLT', 'QQQ', 'VDC', 'GLD']  # 새로운
+# my_stock_name = ['VYM', 'TLT', 'QQQ', 'VDC', 'GLD']  # 새로운  # 기존
+my_stock_name = ['SPY', 'TLT', 'QQQ', 'VDC', 'GLD']  # 새로운
 stock_ref = 'SPY'
-my_u = [0.0624, 0.0745, 0.0509, 0.0912, 0.0825]
-my_v = [0.1485, 0.1314, 0.2361, 0.1113, 0.1759]
+my_u = [0.0624, 0.0745, 0.0509, 0.0912, 0.0825, 0.0825, 0.0825]
+my_v = [0.1485, 0.1314, 0.2361, 0.1113, 0.1759, 0.1759, 0.0825]
 my_stock = []
 momen = []
 smomen = []
@@ -212,8 +223,8 @@ start_money = 8000
 real_money = 8000
 avg_MDD = 0.0
 avg_CAGR = 0.0
-# write_wb = Workbook()
-# write_ws = write_wb.active
+write_wb = Workbook()
+write_ws = write_wb.active
 lc_momen = 0.0
 
 print("시뮬레이션용 코드")
@@ -390,7 +401,7 @@ for k in range(0, sim_n):
                     pass
             if my_stock[stocks - 1].stock_price * 1.1 < my_stock[stocks - 1].d[i] and my_stock[stocks - 1].stock_price != 0:
                 my_stock[stocks - 1].checker = 1
-                my_money += my_stock[stocks - 1].trading(math.floor(my_stock[stocks - 1].stock_num * 0.0), i)
+                my_money += my_stock[stocks - 1].trading(math.floor(my_stock[stocks - 1].stock_num * 0), i)
                 my_stock[stocks - 1].checker = 0
             else:
                 pass
@@ -411,6 +422,8 @@ for k in range(0, sim_n):
                     my_stock[j].checker = 0
                     s_rate[j] = round(lc_momen * my_stock[j].stock_num)
                     my_money += my_stock[j].trading(s_rate[j], i)
+                if my_stock[stocks-1].stock_price * 0.998 > my_stock[stocks-1].d[i]:
+                    my_money += my_stock[stocks-1].trading(0, i)
             else:
                 pass
 
@@ -427,7 +440,7 @@ for k in range(0, sim_n):
         ref_My_Asset[i] += ref_my_stock.d[i] * ref_my_stock.stock_num + ref_my_money
         My_Asset[i] += my_money
         # TODO 엑셀로 데이터 출력하기 주식 수량, 구매가, 현재가, 현재 돈
-        '''
+
         if k == 0:
             for j in range(stocks):
                 write_ws.cell(i + 1, j * 3 + 1, my_stock[j].stock_num)
@@ -435,7 +448,7 @@ for k in range(0, sim_n):
                 write_ws.cell(i + 1, j * 3 + 3, my_stock[j].d[i])
             write_ws.cell(i + 1, 16, my_money)
             write_ws.cell(i + 1, 17, lc_momen)
-'''
+
     if k == 0:
         mdd = cal_mdd(ref_My_Asset)
         print("REF MDD : ", '%.2f' % mdd, end='\t')
@@ -490,14 +503,15 @@ for k in range(0, sim_n):
 
 print("AVG MDD : ", '%.2f' % avg_MDD, end='\t')
 print("AVG CAGR : ", '%.2f' % avg_CAGR)
+write_wb.save('전체값.xlsx')
 
 # df = pd.DataFrame(save_mc_result)
+'''
 data = {'mdd': save_mc_result[:, 0], 'CAGR': save_mc_result[:, 1]}
 df = pd.DataFrame(data)
 df.to_excel("output.xlsx")
-
+'''
 plt.legend(loc='best')
 plt.grid()
 plt.show()
-#write_wb.save('전체값.xlsx')
 print("end")
