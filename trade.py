@@ -131,6 +131,17 @@ class Stock:
 
     def cal_mod_ms(self, _day):
         self.mod_momentum = 0.0
+        period = 10
+        cal_day = 120
+        val = abs(self.d[_day] - self.d[_day - cal_day])
+        fractal = 0
+        for ii in range(int(cal_day / period)):
+            fractal += abs(self.d[_day - ii * period] - self.d[_day - (ii + 1) * period])
+        er = val / fractal
+        if er > 0.3:
+            er = 1
+        period_momen = int(10 + round(er * 10))
+        # period_momen = 20
         temp0 = 1.0
         temp1 = 1.0
         temp2 = 1.2
@@ -144,7 +155,8 @@ class Stock:
                 temp = copy(temp2)
             else:
                 temp = copy(temp3)
-            self.mod_momentum += temp * (self.d[_day] / (self.d[_day - ii * 20] * (1 + self.interest * ii / 12)))
+            self.mod_momentum += temp * (self.d[_day] / (
+                        self.d[_day - ii * period_momen] * (1 + self.interest * ii * period_momen / 240)))
         self.mod_momentum = self.mod_momentum / (temp0 * 3 + temp1 * 3 + temp2 * 3 + temp3 * 3)
         return self.mod_momentum
 
@@ -157,13 +169,15 @@ def cal_momen_losscut(asset, _day):
     temp = 0.0
     momen_rapid_lc = 1
     _vol = []
-    print(_day)
     for i_lc in range(1, 28):
         if i_lc < 15:
             temp = copy(temp0)
         else:
             temp = copy(temp1)
-        momentum += (asset[_day] * 1.04 // asset[_day - i_lc * 5]) * temp
+        if (asset[_day] * 1.04 // asset[_day - i_lc * 5]) > 1.0:
+            momentum += 1 * temp
+        else:
+            momentum += (asset[_day] * 1.04 // asset[_day - i_lc * 5]) * temp
     momentum = momentum / (temp0 * 14 + temp1 * 13)
     # 급락 방어
     if _day > 243:
@@ -194,7 +208,7 @@ my_stock_avg_price = [0, 166.0550, 229.83, 0, 162.1]  # <-----------------------
 current_money = 2587  # <--------------------------------------------------------------여기 수정 해야 함
 
 
-my_stock_name = ['VYM', 'TLT', 'QQQ', 'VDC', 'GLD']  # 새로운
+my_stock_name = ['SPY', 'TLT', 'QQQ', 'VDC', 'GLD']  # 새로운
 stock_ref = 'SPY'
 my_u = [0.0635, 0.0745, 0.0509, 0.0912, 0.0825]
 my_v = [0.1491, 0.1314, 0.2361, 0.1113, 0.1759]
@@ -407,6 +421,8 @@ for k in range(0, sim_n):
                     my_stock[j].checker = 0
                     s_rate[j] = round(lc_momen * my_stock[j].stock_num)
                     my_money += my_stock[j].trading(s_rate[j], i)
+                if my_stock[stocks - 1].stock_price * 0.998 > my_stock[stocks - 1].d[i]:
+                    my_money += my_stock[stocks - 1].trading(0, i)
             else:
                 pass
         else:
