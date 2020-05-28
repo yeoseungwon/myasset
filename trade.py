@@ -138,7 +138,7 @@ class Stock:
         for ii in range(int(cal_day / period)):
             fractal += abs(self.d[_day - ii * period] - self.d[_day - (ii + 1) * period])
         er = val / fractal
-        if er > 0.3:
+        if er > 0.1:
             er = 1
         period_momen = int(10 + round(er * 10))
         # period_momen = 20
@@ -382,8 +382,8 @@ for k in range(0, sim_n):
                     s_rate[j] = math.floor((momen[j] / sum_momen * temp_money) / my_stock[j].d[i])
                     # 값에 따라 매수 또는 매도 진행
                     if j == stocks - 1:
-                        s_rate[j] = s_rate[j] * 0.2
-                    my_money += my_stock[j].trading(s_rate[j], i)  ############
+                        s_rate[j] = s_rate[j] * 0.1
+                    # my_money += my_stock[j].trading(s_rate[j], i)  ############
 
                 if my_money < 0:
                     print(i)
@@ -414,6 +414,16 @@ for k in range(0, sim_n):
             for j in range(stocks):
                 My_Asset[i] += my_stock[j].d[i] * my_stock[j].stock_num
             My_Asset[i] += my_money
+
+            # MDD 강제 조절
+            if max_asset >= My_Asset[i]:
+                if (max_asset - My_Asset[i]) / max_asset > 0.1:
+                    for j in range(stocks):
+                        if my_stock[j].stock_price > my_stock[j].d[i]:
+                            my_stock[j].checker = 1
+            else:
+                max_asset = My_Asset[i]
+
             lc_momen = cal_momen_losscut(My_Asset, i)
             if lc_momen < (1 - my_money / My_Asset[i]):
                 lc_momen = lc_momen / (1 - my_money / My_Asset[i])
