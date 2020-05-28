@@ -29,7 +29,7 @@ class Stock:
     def __init__(self, stock_name, u, v):
         self.u = u    # 연 평균 증가율
         self.v = v    # 연 평균 변화율
-        self.data = web.DataReader(stock_name, 'yahoo', '2007-02-01').Close[:]
+        self.data = web.DataReader(stock_name, 'yahoo', '2005-02-01').Close[:]
         self.money = 0
         self.stock_num = 0
         self.stock_price = 0.0
@@ -141,10 +141,10 @@ class Stock:
         for ii in range(int(cal_day / period)):
             fractal += abs(self.d[_day - ii * period] - self.d[_day - (ii + 1) * period])
         er = val / fractal
-        if er > 0.3:
+        if er > 0.1:
             er = 1
         period_momen = int(10 + round(er * 10))
-        # period_momen = 20
+        # eriod_momen = 20
         temp0 = 1.0
         temp1 = 1.0
         temp2 = 1.2
@@ -383,7 +383,7 @@ for k in range(0, sim_n):
                     s_rate[j] = math.floor((momen[j] / sum_momen * temp_money) / my_stock[j].d[i])
                     # 값에 따라 매수 또는 매도 진행
                     if j == stocks - 1:
-                        s_rate[j] = s_rate[j] * 0.2
+                        s_rate[j] = s_rate[j] * 0.1
                     my_money += my_stock[j].trading(s_rate[j], i)
 
                 if my_money < 0:
