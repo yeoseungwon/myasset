@@ -116,8 +116,10 @@ class Stock:
     def check_losscut(self, _day):
         if _day == self.hold_day:
             return 0
+        if self.stock_price == 0:
+            return 0
         cl_a = (- self.stock_price + self.d[_day]) / self.stock_price
-        cl_b = (self.u / 240 * (_day - self.hold_day) - (self.v / math.sqrt(240 / (_day - self.hold_day)) * 3000.1))
+        cl_b = (self.u / 240 * (_day - self.hold_day) - (self.v / math.sqrt(240 / (_day - self.hold_day)) * 400))
         if cl_a < cl_b:
             self.checker = 1
             return 1
@@ -226,6 +228,7 @@ avg_CAGR = 0.0
 write_wb = Workbook()
 write_ws = write_wb.active
 lc_momen = 0.0
+max_asset = 0.0
 
 print("시뮬레이션용 코드")
 print("Data 입력 시작")
@@ -410,18 +413,36 @@ for k in range(0, sim_n):
                 print("W")
             else:
                 pass
-
+            '''
+            # 종목별 손절매
+            for j in range(stocks):
+                if my_stock[j].check_losscut(i) == 1:
+                    my_money += my_stock[j].trading(my_stock[j].stock_num * 1, i)
+                    my_stock[j].checker = 0
+                else:
+                    pass
+            '''
             # 시스템 손절매
             for j in range(stocks):
                 My_Asset[i] += my_stock[j].d[i] * my_stock[j].stock_num
             My_Asset[i] += my_money
+            # MDD 강제 조절
+            if max_asset >= My_Asset[i]:
+                if (max_asset - My_Asset[i]) / max_asset > 0.1:
+                    for j in range(stocks):
+                        if my_stock[j].stock_price > my_stock[j].d[i]:
+                            my_stock[j].checker = 1
+            else:
+                max_asset = My_Asset[i]
+
             lc_momen = cal_momen_losscut(My_Asset, i)
             if lc_momen < (1 - my_money / My_Asset[i]):
                 lc_momen = lc_momen / (1 - my_money / My_Asset[i])
                 for j in range(stocks):
-                    my_stock[j].checker = 0
+                    # my_stock[j].checker = 0
                     s_rate[j] = round(lc_momen * my_stock[j].stock_num)
                     my_money += my_stock[j].trading(s_rate[j], i)
+                    my_stock[j].checker = 0
                 if my_stock[stocks-1].stock_price * 0.998 > my_stock[stocks-1].d[i]:
                     my_money += my_stock[stocks-1].trading(0, i)
             else:
@@ -439,6 +460,7 @@ for k in range(0, sim_n):
             My_Asset[i] += my_stock[j].d[i] * my_stock[j].stock_num
         ref_My_Asset[i] += ref_my_stock.d[i] * ref_my_stock.stock_num + ref_my_money
         My_Asset[i] += my_money
+
         # TODO 엑셀로 데이터 출력하기 주식 수량, 구매가, 현재가, 현재 돈
 
         if k == 0:
